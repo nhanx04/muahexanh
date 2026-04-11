@@ -16,6 +16,7 @@ E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\MuaHexa
 E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\security\CustomUserDetailsService.java
 E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\security\JwtAuthenticationFilter.java
 E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\security\JwtService.java
+E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\user\dto\UpdateUserProfileRequest.java
 E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\user\dto\UserProfileResponse.java
 E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\user\User.java
 E:\bku\252\CNPMNC\LAB\axon\code\muahexanh\src\main\java\com\muahexanh\be\user\UserController.java

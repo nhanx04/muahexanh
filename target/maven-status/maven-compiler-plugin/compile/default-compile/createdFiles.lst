@@ -17,6 +17,7 @@ com\muahexanh\be\user\dto\UserProfileResponse.class
 com\muahexanh\be\health\HealthController.class
 com\muahexanh\be\auth\AuthService.class
 com\muahexanh\be\user\UserService.class
+com\muahexanh\be\user\dto\UpdateUserProfileRequest.class
 com\muahexanh\be\auth\dto\CreateUserByAdminRequest.class
 com\muahexanh\be\security\JwtService.class
 com\muahexanh\be\auth\AuthController.class
