@@ -37,7 +37,7 @@ public class AuthService {
 
     @Transactional
     public String registerStudent(StudentRegisterRequest request) {
-        ensureUsernameAndEmailAvailable(request.username(), request.email());
+        ensureUsernameAndEmailAvailable(request.username(), request.email(), null);
 
         StudentRegistrationApplication app = new StudentRegistrationApplication();
         app.setUsername(request.username().trim());
@@ -58,7 +58,7 @@ public class AuthService {
         if (request.role() == UserRole.STUDENT) {
             throw new IllegalArgumentException("API này chỉ tạo COMMUNITY_LEADER hoặc UNI_ADMIN");
         }
-        ensureUsernameAndEmailAvailable(request.username(), request.email());
+        ensureUsernameAndEmailAvailable(request.username(), request.email(), null);
 
         User user = new User();
         user.setUsername(request.username().trim());
@@ -118,7 +118,7 @@ public class AuthService {
         app.setReviewerNote(request.reviewerNote());
 
         if (request.approved()) {
-            ensureUsernameAndEmailAvailable(app.getUsername(), app.getEmail());
+            ensureUsernameAndEmailAvailable(app.getUsername(), app.getEmail(), app.getId());
             User student = new User();
             student.setUsername(app.getUsername());
             student.setEmail(app.getEmail());
@@ -145,13 +145,27 @@ public class AuthService {
         return toResponse(appRepository.save(app));
     }
 
-    private void ensureUsernameAndEmailAvailable(String username, String email) {
-        if (userRepository.findByUsername(username.trim()).isPresent()
-                || appRepository.existsByUsername(username.trim())) {
+    private void ensureUsernameAndEmailAvailable(String username, String email, Long excludeApplicationId) {
+        String normalizedUsername = username.trim();
+        String normalizedEmail = email.trim().toLowerCase();
+
+        if (userRepository.findByUsername(normalizedUsername).isPresent()) {
             throw new IllegalArgumentException("Username đã tồn tại");
         }
-        if (userRepository.findByEmail(email.trim().toLowerCase()).isPresent()
-                || appRepository.existsByEmail(email.trim().toLowerCase())) {
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+            throw new IllegalArgumentException("Email đã tồn tại");
+        }
+
+        List<StudentRegistrationApplication> relatedApps = appRepository.findByStatus(RegistrationStatus.PENDING);
+        boolean usernameExistsInOtherApp = relatedApps.stream()
+                .anyMatch(a -> !a.getId().equals(excludeApplicationId) && normalizedUsername.equals(a.getUsername()));
+        if (usernameExistsInOtherApp) {
+            throw new IllegalArgumentException("Username đã tồn tại");
+        }
+
+        boolean emailExistsInOtherApp = relatedApps.stream()
+                .anyMatch(a -> !a.getId().equals(excludeApplicationId) && normalizedEmail.equals(a.getEmail()));
+        if (emailExistsInOtherApp) {
             throw new IllegalArgumentException("Email đã tồn tại");
         }
     }
