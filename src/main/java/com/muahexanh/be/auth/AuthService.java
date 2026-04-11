@@ -3,8 +3,6 @@ package com.muahexanh.be.auth;
 import com.muahexanh.be.auth.dto.CreateUserByAdminRequest;
 import com.muahexanh.be.auth.dto.LoginRequest;
 import com.muahexanh.be.auth.dto.LoginResponse;
-import com.muahexanh.be.auth.dto.ReviewStudentApplicationRequest;
-import com.muahexanh.be.auth.dto.StudentApplicationResponse;
 import com.muahexanh.be.auth.dto.StudentRegisterRequest;
 import com.muahexanh.be.user.User;
 import com.muahexanh.be.user.UserProfile;
@@ -16,13 +14,9 @@ import com.muahexanh.be.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,35 +24,41 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
-    private final StudentRegistrationApplicationRepository appRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
     @Transactional
     public String registerStudent(StudentRegisterRequest request) {
-        ensureUsernameAndEmailAvailable(request.username(), request.email(), null);
+        ensureUsernameAndEmailAvailable(request.username(), request.email());
 
-        StudentRegistrationApplication app = new StudentRegistrationApplication();
-        app.setUsername(request.username().trim());
-        app.setPassword(passwordEncoder.encode(request.password()));
-        app.setFullName(request.fullName().trim());
-        app.setEmail(request.email().trim().toLowerCase());
-        app.setPhoneNumber(request.phoneNumber());
-        app.setAddress(request.address());
-        app.setAbilitiesDescription(request.abilitiesDescription());
-        app.setStatus(RegistrationStatus.PENDING);
+        User student = new User();
+        student.setUsername(request.username().trim());
+        student.setEmail(request.email().trim().toLowerCase());
+        student.setFullName(request.fullName().trim());
+        student.setPassword(passwordEncoder.encode(request.password()));
+        student.setRole(UserRole.STUDENT);
+        student.setStatus(UserStatus.ACTIVE);
+        User saved = userRepository.save(student);
 
-        appRepository.save(app);
-        return "Đã gửi đơn đăng ký, chờ duyệt";
+        UserProfile profile = new UserProfile();
+        profile.setUser(saved);
+        profile.setFullName(request.fullName().trim());
+        profile.setEmail(request.email().trim().toLowerCase());
+        profile.setPhoneNumber(request.phoneNumber());
+        profile.setAddress(request.address());
+        profile.setAbilitiesDescription(request.abilitiesDescription());
+        userProfileRepository.save(profile);
+
+        return "Student account created successfully";
     }
 
     @Transactional
     public String createUserByAdmin(CreateUserByAdminRequest request) {
         if (request.role() == UserRole.STUDENT) {
-            throw new IllegalArgumentException("API này chỉ tạo COMMUNITY_LEADER hoặc UNI_ADMIN");
+            throw new IllegalArgumentException("This API can only create COMMUNITY_LEADER or UNI_ADMIN accounts");
         }
-        ensureUsernameAndEmailAvailable(request.username(), request.email(), null);
+        ensureUsernameAndEmailAvailable(request.username(), request.email());
 
         User user = new User();
         user.setUsername(request.username().trim());
@@ -78,7 +78,7 @@ public class AuthService {
         profile.setOrganizationName(request.organizationName());
         userProfileRepository.save(profile);
 
-        return "Tạo tài khoản thành công";
+        return "Account created successfully";
     }
 
     @Transactional(readOnly = true)
@@ -87,105 +87,25 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
         User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new IllegalArgumentException("Sai thông tin đăng nhập"));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new IllegalArgumentException("Tài khoản chưa active hoặc đã bị khóa");
+            throw new IllegalArgumentException("Account is not active or has been locked");
         }
 
         String token = jwtService.generateToken(user);
         return new LoginResponse(token, "Bearer", user.getId(), user.getUsername(), user.getRole());
     }
 
-    @Transactional(readOnly = true)
-    public List<StudentApplicationResponse> getPendingApplications() {
-        return appRepository.findByStatus(RegistrationStatus.PENDING)
-                .stream().map(this::toResponse).toList();
-    }
-
-    @Transactional
-    public StudentApplicationResponse reviewStudentApplication(Long applicationId,
-            ReviewStudentApplicationRequest request) {
-        StudentRegistrationApplication app = appRepository.findById(applicationId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn"));
-
-        if (app.getStatus() != RegistrationStatus.PENDING) {
-            throw new IllegalArgumentException("Đơn đã được xử lý");
-        }
-
-        User reviewer = getCurrentUser();
-        app.setReviewedBy(reviewer);
-        app.setReviewerNote(request.reviewerNote());
-
-        if (request.approved()) {
-            ensureUsernameAndEmailAvailable(app.getUsername(), app.getEmail(), app.getId());
-            User student = new User();
-            student.setUsername(app.getUsername());
-            student.setEmail(app.getEmail());
-            student.setFullName(app.getFullName());
-            student.setPassword(app.getPassword());
-            student.setRole(UserRole.STUDENT);
-            student.setStatus(UserStatus.ACTIVE);
-            User saved = userRepository.save(student);
-
-            UserProfile profile = new UserProfile();
-            profile.setUser(saved);
-            profile.setFullName(app.getFullName());
-            profile.setEmail(app.getEmail());
-            profile.setPhoneNumber(app.getPhoneNumber());
-            profile.setAddress(app.getAddress());
-            profile.setAbilitiesDescription(app.getAbilitiesDescription());
-            userProfileRepository.save(profile);
-
-            app.setStatus(RegistrationStatus.APPROVED);
-        } else {
-            app.setStatus(RegistrationStatus.REJECTED);
-        }
-
-        return toResponse(appRepository.save(app));
-    }
-
-    private void ensureUsernameAndEmailAvailable(String username, String email, Long excludeApplicationId) {
+    private void ensureUsernameAndEmailAvailable(String username, String email) {
         String normalizedUsername = username.trim();
         String normalizedEmail = email.trim().toLowerCase();
 
         if (userRepository.findByUsername(normalizedUsername).isPresent()) {
-            throw new IllegalArgumentException("Username đã tồn tại");
+            throw new IllegalArgumentException("Username already exists");
         }
         if (userRepository.findByEmail(normalizedEmail).isPresent()) {
-            throw new IllegalArgumentException("Email đã tồn tại");
+            throw new IllegalArgumentException("Email already exists");
         }
-
-        List<StudentRegistrationApplication> relatedApps = appRepository.findByStatus(RegistrationStatus.PENDING);
-        boolean usernameExistsInOtherApp = relatedApps.stream()
-                .anyMatch(a -> !a.getId().equals(excludeApplicationId) && normalizedUsername.equals(a.getUsername()));
-        if (usernameExistsInOtherApp) {
-            throw new IllegalArgumentException("Username đã tồn tại");
-        }
-
-        boolean emailExistsInOtherApp = relatedApps.stream()
-                .anyMatch(a -> !a.getId().equals(excludeApplicationId) && normalizedEmail.equals(a.getEmail()));
-        if (emailExistsInOtherApp) {
-            throw new IllegalArgumentException("Email đã tồn tại");
-        }
-    }
-
-    private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return userRepository.findByUsername(auth.getName())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user hiện tại"));
-    }
-
-    private StudentApplicationResponse toResponse(StudentRegistrationApplication app) {
-        return new StudentApplicationResponse(
-                app.getId(),
-                app.getUsername(),
-                app.getFullName(),
-                app.getEmail(),
-                app.getStatus(),
-                app.getReviewerNote(),
-                app.getReviewedBy() != null ? app.getReviewedBy().getId() : null,
-                app.getCreatedAt(),
-                app.getUpdatedAt());
     }
 }
