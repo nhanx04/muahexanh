@@ -17,13 +17,15 @@ spring:
     import: optional:file:.env[.properties]
 ```
 
-Tạo file `.env` ở thư mục gốc dự án với nội dung:
+**Không commit file `.env` lên git.**
 
-```env
-DB_URL=jdbc:postgresql://ep-falling-snow-amgz9gdu-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-DB_USERNAME=neondb_owner
-DB_PASSWORD=<your_password>
+1. Copy từ file mẫu:
+
+```bash
+cp .env.example .env
 ```
+
+2. Điền giá trị thật vào `.env` (không chia sẻ cho người khác).
 
 - Swagger/OpenAPI
 
