@@ -3,10 +3,12 @@ package com.muahexanh.be.project;
 import com.muahexanh.be.project.dto.CreateProjectRequest;
 import com.muahexanh.be.user.User;
 import com.muahexanh.be.user.UserRepository;
+import com.muahexanh.be.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -16,11 +18,12 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final ProjectApplicationRepository projectApplicationRepository;
 
     @Transactional
     public Project createProject(CreateProjectRequest request, Long leaderId) {
         User leader = userRepository.findById(leaderId)
-                .orElseThrow(() -> new RuntimeException("Leader not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Leader not found"));
 
         Project project = new Project();
         project.setLeader(leader);
@@ -41,7 +44,71 @@ public class ProjectService {
 
     public Project getProjectById(Long id) {
         return projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+    }
+
+    @Transactional
+    public ProjectApplication applyToProject(Long projectId, Long studentId) {
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new IllegalArgumentException("Only STUDENT can apply to a project");
+        }
+
+        Project project = getProjectById(projectId);
+
+        boolean alreadyApplied = projectApplicationRepository.existsByProjectIdAndStudentId(projectId, studentId);
+        if (alreadyApplied) {
+            throw new IllegalArgumentException("You have already applied to this project");
+        }
+
+        ProjectApplication application = new ProjectApplication();
+        application.setProject(project);
+        application.setStudent(student);
+        application.setStatus(ProjectApplicationStatus.APPLIED);
+        application.setAppliedAt(LocalDateTime.now());
+        return projectApplicationRepository.save(application);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectApplication> getPendingApplications() {
+        return projectApplicationRepository.findByStatus(ProjectApplicationStatus.APPLIED);
+    }
+
+    @Transactional
+    public ProjectApplication reviewApplication(Long applicationId, ProjectApplicationStatus status, Long reviewerId) {
+        User reviewer = userRepository.findById(reviewerId)
+                .orElseThrow(() -> new IllegalArgumentException("Reviewer not found"));
+        if (reviewer.getRole() != UserRole.COMMUNITY_LEADER && reviewer.getRole() != UserRole.UNI_ADMIN) {
+            throw new IllegalArgumentException("Only COMMUNITY_LEADER or UNI_ADMIN can review applications");
+        }
+
+        ProjectApplication application = projectApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new IllegalArgumentException("Project application not found"));
+
+        if (application.getStatus() != ProjectApplicationStatus.APPLIED) {
+            throw new IllegalArgumentException("This application has already been reviewed");
+        }
+        if (status == ProjectApplicationStatus.APPLIED) {
+            throw new IllegalArgumentException("Review status must be ACCEPTED or REJECTED");
+        }
+
+        if (status == ProjectApplicationStatus.ACCEPTED) {
+            long acceptedCount = projectApplicationRepository.countByProjectIdAndStatus(
+                    application.getProject().getId(), ProjectApplicationStatus.ACCEPTED);
+            if (acceptedCount >= application.getProject().getAmountOfParticipants()) {
+                throw new IllegalArgumentException("Project has reached the participant limit");
+            }
+        }
+
+        application.setStatus(status);
+        return projectApplicationRepository.save(application);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectApplication> getAcceptedApplicationsByProject(Long projectId) {
+        getProjectById(projectId);
+        return projectApplicationRepository.findByProjectIdAndStatus(projectId, ProjectApplicationStatus.ACCEPTED);
     }
 
     private static java.time.LocalDateTime convertToLocalDateTime(OffsetDateTime dateTime) {

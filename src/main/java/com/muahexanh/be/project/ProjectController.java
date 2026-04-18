@@ -1,7 +1,11 @@
 package com.muahexanh.be.project;
 
+import com.muahexanh.be.project.dto.ApplyProjectRequest;
 import com.muahexanh.be.project.dto.CreateProjectRequest;
+import com.muahexanh.be.project.dto.ProjectApplicationResponse;
+import com.muahexanh.be.project.dto.ProjectMemberResponse;
 import com.muahexanh.be.project.dto.ProjectResponse;
+import com.muahexanh.be.project.dto.UpdateProjectApplicationStatusRequest;
 import com.muahexanh.be.user.User;
 import com.muahexanh.be.user.UserRepository;
 import jakarta.validation.Valid;
@@ -24,16 +28,42 @@ public class ProjectController {
     private final UserRepository userRepository;
 
     @PostMapping
-    // @PreAuthorize("hasRole('COMMUNITY_LEADER')")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
     public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody CreateProjectRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Leader not found"));
-        Long leaderId = currentUser.getId();
-
-        Project project = projectService.createProject(request, leaderId);
+        User currentUser = getCurrentUser();
+        Project project = projectService.createProject(request, currentUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProjectResponse.fromEntity(project));
+    }
+
+    @PostMapping("/applications")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ProjectApplicationResponse> applyToProject(@Valid @RequestBody ApplyProjectRequest request) {
+        User currentUser = getCurrentUser();
+        ProjectApplication application = projectService.applyToProject(request.getProjectId(), currentUser.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProjectApplicationResponse.fromEntity(application));
+    }
+
+    @GetMapping("/applications/pending")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
+    public ResponseEntity<List<ProjectApplicationResponse>> getPendingApplications() {
+        List<ProjectApplicationResponse> applications = projectService.getPendingApplications()
+                .stream()
+                .map(ProjectApplicationResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(applications);
+    }
+
+    @PatchMapping("/applications/{applicationId}/status")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
+    public ResponseEntity<ProjectApplicationResponse> reviewApplication(
+            @PathVariable Long applicationId,
+            @Valid @RequestBody UpdateProjectApplicationStatusRequest request) {
+        User currentUser = getCurrentUser();
+        ProjectApplication application = projectService.reviewApplication(
+                applicationId,
+                request.getStatus(),
+                currentUser.getId());
+        return ResponseEntity.ok(ProjectApplicationResponse.fromEntity(application));
     }
 
     @GetMapping
@@ -49,5 +79,21 @@ public class ProjectController {
     public ResponseEntity<ProjectResponse> getProjectById(@PathVariable Long id) {
         Project project = projectService.getProjectById(id);
         return ResponseEntity.ok(ProjectResponse.fromEntity(project));
+    }
+
+    @GetMapping("/{id}/students")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
+    public ResponseEntity<List<ProjectMemberResponse>> getAcceptedStudentsByProject(@PathVariable Long id) {
+        List<ProjectMemberResponse> students = projectService.getAcceptedApplicationsByProject(id)
+                .stream()
+                .map(ProjectMemberResponse::fromApplication)
+                .toList();
+        return ResponseEntity.ok(students);
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Current user not found"));
     }
 }
