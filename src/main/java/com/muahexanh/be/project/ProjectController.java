@@ -24,7 +24,8 @@ public class ProjectController {
     private final UserRepository userRepository;
 
     @PostMapping
-    // @PreAuthorize("hasRole('COMMUNITY_LEADER')")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
+    
     public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody CreateProjectRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
