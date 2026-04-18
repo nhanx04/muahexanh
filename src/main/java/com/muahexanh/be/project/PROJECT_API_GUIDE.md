@@ -19,7 +19,8 @@ Authorization: Bearer <ACCESS_TOKEN>
 Roles:
 
 - `STUDENT`: can apply to project.
-- `COMMUNITY_LEADER`, `UNI_ADMIN`: can create project, view pending applications, review applications, and view accepted students.
+- `COMMUNITY_LEADER`: can create project, review student applications, view accepted students, and ban student from project.
+- `UNI_ADMIN`: can do all leader actions and update project information/status.
 
 ---
 
@@ -127,7 +128,49 @@ Structure is the same as project object above.
 
 ---
 
-## 5) Apply to Project
+## 5) Update Project (Admin only)
+
+- **Method**: `PATCH`
+- **URL**: `/api/v1/projects/{id}`
+- **Roles**: `UNI_ADMIN`
+- **Description**:
+  - Update project information and status in one API.
+  - For `status = APPROVED` or `REJECTED`, project must currently be `PENDING`.
+- **Body** (partial update, all fields optional):
+
+```json
+{
+  "title": "Green Summer Campaign 2026 - Updated",
+  "description": "Updated description",
+  "requiredSkills": "Communication, Teamwork, Event Planning",
+  "startTime": "2026-07-02T08:00:00+07:00",
+  "endTime": "2026-07-31T17:00:00+07:00",
+  "amountOfParticipants": 25,
+  "status": "IN_PROGRESS"
+}
+```
+
+- **Response**: `200 OK`
+
+```json
+{
+  "id": 1,
+  "title": "Green Summer Campaign 2026 - Updated",
+  "description": "Updated description",
+  "requiredSkills": "Communication, Teamwork, Event Planning",
+  "startTime": "2026-07-02T08:00:00",
+  "endTime": "2026-07-31T17:00:00",
+  "amountOfParticipants": 25,
+  "status": "IN_PROGRESS",
+  "leaderId": 2,
+  "leaderName": "Leader One",
+  "createdAt": "2026-06-01T10:00:00"
+}
+```
+
+---
+
+## 6) Apply to Project
 
 - **Method**: `POST`
 - **URL**: `/api/v1/projects/applications`
@@ -156,7 +199,7 @@ Structure is the same as project object above.
 
 ---
 
-## 6) Get Pending Applications
+## 7) Get Pending Applications
 
 - **Method**: `GET`
 - **URL**: `/api/v1/projects/applications/pending`
@@ -180,7 +223,7 @@ Structure is the same as project object above.
 
 ---
 
-## 7) Review Project Application
+## 8) Review Project Application
 
 - **Method**: `PATCH`
 - **URL**: `/api/v1/projects/applications/{applicationId}/status`
@@ -217,7 +260,7 @@ or
 
 ---
 
-## 8) Get Accepted Students of a Project
+## 9) Get Accepted Students of a Project
 
 - **Method**: `GET`
 - **URL**: `/api/v1/projects/{id}/students`
@@ -238,7 +281,7 @@ or
 
 ---
 
-## 9) Ban Student from Project
+## 10) Ban Student from Project
 
 - **Method**: `PATCH`
 - **URL**: `/api/v1/projects/{id}/students/ban`
@@ -280,6 +323,8 @@ Examples:
 - `This application has already been reviewed`
 - `Review status must be ACCEPTED or REJECTED`
 - `Project has reached the participant limit`
+- `Only UNI_ADMIN can update project`
+- `Only PENDING project can be approved or rejected`
 - `Only COMMUNITY_LEADER or UNI_ADMIN can ban students`
 - `Target user is not a STUDENT`
 - `Student is not an accepted member of this project`

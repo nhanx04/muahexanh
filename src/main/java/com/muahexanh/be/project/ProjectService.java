@@ -1,6 +1,7 @@
 package com.muahexanh.be.project;
 
 import com.muahexanh.be.project.dto.CreateProjectRequest;
+import com.muahexanh.be.project.dto.UpdateProjectRequest;
 import com.muahexanh.be.user.User;
 import com.muahexanh.be.user.UserRepository;
 import com.muahexanh.be.user.UserRole;
@@ -55,6 +56,40 @@ public class ProjectService {
     public Project getProjectById(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+    }
+
+    @Transactional
+    public Project updateProject(Long projectId, UpdateProjectRequest request, Long updaterId) {
+        User updater = userRepository.findById(updaterId)
+                .orElseThrow(() -> new IllegalArgumentException("Updater not found"));
+        if (updater.getRole() != UserRole.UNI_ADMIN) {
+            throw new IllegalArgumentException("Only UNI_ADMIN can update project");
+        }
+
+        Project project = getProjectById(projectId);
+
+        if (request.getTitle() != null)
+            project.setTitle(request.getTitle());
+        if (request.getDescription() != null)
+            project.setDescription(request.getDescription());
+        if (request.getRequiredSkills() != null)
+            project.setRequiredSkills(request.getRequiredSkills());
+        if (request.getStartTime() != null)
+            project.setStartTime(convertToLocalDateTime(request.getStartTime()));
+        if (request.getEndTime() != null)
+            project.setEndTime(convertToLocalDateTime(request.getEndTime()));
+        if (request.getAmountOfParticipants() != null)
+            project.setAmountOfParticipants(request.getAmountOfParticipants());
+
+        if (request.getStatus() != null) {
+            if ((request.getStatus() == ProjectStatus.APPROVED || request.getStatus() == ProjectStatus.REJECTED)
+                    && project.getStatus() != ProjectStatus.PENDING) {
+                throw new IllegalArgumentException("Only PENDING project can be approved or rejected");
+            }
+            project.setStatus(request.getStatus());
+        }
+
+        return projectRepository.save(project);
     }
 
     @Transactional

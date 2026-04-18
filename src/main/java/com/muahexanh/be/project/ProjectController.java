@@ -7,6 +7,7 @@ import com.muahexanh.be.project.dto.ProjectApplicationResponse;
 import com.muahexanh.be.project.dto.ProjectMemberResponse;
 import com.muahexanh.be.project.dto.ProjectResponse;
 import com.muahexanh.be.project.dto.UpdateProjectApplicationStatusRequest;
+import com.muahexanh.be.project.dto.UpdateProjectRequest;
 import com.muahexanh.be.user.User;
 import com.muahexanh.be.user.UserRepository;
 import jakarta.validation.Valid;
@@ -90,6 +91,16 @@ public class ProjectController {
                 .map(ProjectResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(projects);
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('UNI_ADMIN')")
+    public ResponseEntity<ProjectResponse> updateProject(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectRequest request) {
+        User currentUser = getCurrentUser();
+        Project project = projectService.updateProject(id, request, currentUser.getId());
+        return ResponseEntity.ok(ProjectResponse.fromEntity(project));
     }
 
     @GetMapping("/{id}/students")
