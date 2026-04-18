@@ -238,6 +238,36 @@ or
 
 ---
 
+## 9) Ban Student from Project
+
+- **Method**: `PATCH`
+- **URL**: `/api/v1/projects/{id}/students/ban`
+- **Roles**: `COMMUNITY_LEADER`, `UNI_ADMIN`
+- **Description**: Ban an accepted student from a specific project.
+- **Body**:
+
+```json
+{
+  "studentId": 5
+}
+```
+
+- **Response**: `200 OK`
+
+```json
+{
+  "id": 10,
+  "projectId": 1,
+  "projectTitle": "Green Summer Campaign 2026",
+  "studentId": 5,
+  "studentName": "Nguyen Van Student",
+  "status": "BANNED",
+  "appliedAt": "2026-06-01T11:00:00"
+}
+```
+
+---
+
 ## Common Error Responses
 
 ### 400 BAD_REQUEST
@@ -250,6 +280,9 @@ Examples:
 - `This application has already been reviewed`
 - `Review status must be ACCEPTED or REJECTED`
 - `Project has reached the participant limit`
+- `Only COMMUNITY_LEADER or UNI_ADMIN can ban students`
+- `Target user is not a STUDENT`
+- `Student is not an accepted member of this project`
 - `Project not found`
 
 Format:

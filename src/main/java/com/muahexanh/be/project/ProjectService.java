@@ -99,7 +99,7 @@ public class ProjectService {
         if (application.getStatus() != ProjectApplicationStatus.APPLIED) {
             throw new IllegalArgumentException("This application has already been reviewed");
         }
-        if (status == ProjectApplicationStatus.APPLIED) {
+        if (status == ProjectApplicationStatus.APPLIED || status == ProjectApplicationStatus.BANNED) {
             throw new IllegalArgumentException("Review status must be ACCEPTED or REJECTED");
         }
 
@@ -112,6 +112,32 @@ public class ProjectService {
         }
 
         application.setStatus(status);
+        return projectApplicationRepository.save(application);
+    }
+
+    @Transactional
+    public ProjectApplication banStudentFromProject(Long projectId, Long studentId, Long reviewerId) {
+        User reviewer = userRepository.findById(reviewerId)
+                .orElseThrow(() -> new IllegalArgumentException("Reviewer not found"));
+        if (reviewer.getRole() != UserRole.COMMUNITY_LEADER && reviewer.getRole() != UserRole.UNI_ADMIN) {
+            throw new IllegalArgumentException("Only COMMUNITY_LEADER or UNI_ADMIN can ban students");
+        }
+
+        getProjectById(projectId);
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new IllegalArgumentException("Target user is not a STUDENT");
+        }
+
+        ProjectApplication application = projectApplicationRepository
+                .findByProjectIdAndStatus(projectId, ProjectApplicationStatus.ACCEPTED)
+                .stream()
+                .filter(a -> a.getStudent().getId().equals(studentId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Student is not an accepted member of this project"));
+
+        application.setStatus(ProjectApplicationStatus.BANNED);
         return projectApplicationRepository.save(application);
     }
 

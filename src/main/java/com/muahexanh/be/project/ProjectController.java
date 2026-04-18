@@ -1,6 +1,7 @@
 package com.muahexanh.be.project;
 
 import com.muahexanh.be.project.dto.ApplyProjectRequest;
+import com.muahexanh.be.project.dto.BanStudentRequest;
 import com.muahexanh.be.project.dto.CreateProjectRequest;
 import com.muahexanh.be.project.dto.ProjectApplicationResponse;
 import com.muahexanh.be.project.dto.ProjectMemberResponse;
@@ -99,6 +100,17 @@ public class ProjectController {
                 .map(ProjectMemberResponse::fromApplication)
                 .toList();
         return ResponseEntity.ok(students);
+    }
+
+    @PatchMapping("/{id}/students/ban")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
+    public ResponseEntity<ProjectApplicationResponse> banStudentFromProject(
+            @PathVariable Long id,
+            @Valid @RequestBody BanStudentRequest request) {
+        User currentUser = getCurrentUser();
+        ProjectApplication application = projectService.banStudentFromProject(id, request.getStudentId(),
+                currentUser.getId());
+        return ResponseEntity.ok(ProjectApplicationResponse.fromEntity(application));
     }
 
     private User getCurrentUser() {
