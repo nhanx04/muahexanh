@@ -81,6 +81,16 @@ public class ProjectController {
         return ResponseEntity.ok(ProjectResponse.fromEntity(project));
     }
 
+    @GetMapping("/leader/{leaderId}")
+    @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
+    public ResponseEntity<List<ProjectResponse>> getProjectsByLeader(@PathVariable Long leaderId) {
+        List<ProjectResponse> projects = projectService.getProjectsByLeader(leaderId)
+                .stream()
+                .map(ProjectResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(projects);
+    }
+
     @GetMapping("/{id}/students")
     @PreAuthorize("hasAnyRole('COMMUNITY_LEADER','UNI_ADMIN')")
     public ResponseEntity<List<ProjectMemberResponse>> getAcceptedStudentsByProject(@PathVariable Long id) {

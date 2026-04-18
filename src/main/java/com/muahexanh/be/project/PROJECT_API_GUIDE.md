@@ -17,6 +17,7 @@ Authorization: Bearer <ACCESS_TOKEN>
 ```
 
 Roles:
+
 - `STUDENT`: can apply to project.
 - `COMMUNITY_LEADER`, `UNI_ADMIN`: can create project, view pending applications, review applications, and view accepted students.
 
@@ -98,7 +99,35 @@ Structure is the same as project object above.
 
 ---
 
-## 4) Apply to Project
+## 4) Get Projects by Leader
+
+- **Method**: `GET`
+- **URL**: `/api/v1/projects/leader/{leaderId}`
+- **Roles**: `COMMUNITY_LEADER`, `UNI_ADMIN`
+- **Description**: Returns all projects created by a specific leader/admin account.
+- **Response**: `200 OK`
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Green Summer Campaign 2026",
+    "description": "Support local environmental activities and community outreach.",
+    "requiredSkills": "Communication, Teamwork",
+    "startTime": "2026-07-01T08:00:00",
+    "endTime": "2026-07-30T17:00:00",
+    "amountOfParticipants": 20,
+    "status": "PENDING",
+    "leaderId": 2,
+    "leaderName": "Leader One",
+    "createdAt": "2026-06-01T10:00:00"
+  }
+]
+```
+
+---
+
+## 5) Apply to Project
 
 - **Method**: `POST`
 - **URL**: `/api/v1/projects/applications`
@@ -127,7 +156,7 @@ Structure is the same as project object above.
 
 ---
 
-## 5) Get Pending Applications
+## 6) Get Pending Applications
 
 - **Method**: `GET`
 - **URL**: `/api/v1/projects/applications/pending`
@@ -151,7 +180,7 @@ Structure is the same as project object above.
 
 ---
 
-## 6) Review Project Application
+## 7) Review Project Application
 
 - **Method**: `PATCH`
 - **URL**: `/api/v1/projects/applications/{applicationId}/status`
@@ -188,7 +217,7 @@ or
 
 ---
 
-## 7) Get Accepted Students of a Project
+## 8) Get Accepted Students of a Project
 
 - **Method**: `GET`
 - **URL**: `/api/v1/projects/{id}/students`
@@ -214,6 +243,7 @@ or
 ### 400 BAD_REQUEST
 
 Examples:
+
 - `Only STUDENT can apply to a project`
 - `You have already applied to this project`
 - `Only COMMUNITY_LEADER or UNI_ADMIN can review applications`
@@ -233,11 +263,13 @@ Format:
 ```
 
 ### 401 Unauthorized
+
 Missing or invalid token.
 
 ### 403 Forbidden
+
 Role does not have permission for endpoint.
 
 ### 422 VALIDATION_ERROR
-Invalid request body.
 
+Invalid request body.

@@ -42,6 +42,16 @@ public class ProjectService {
         return projectRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<Project> getProjectsByLeader(Long leaderId) {
+        User leader = userRepository.findById(leaderId)
+                .orElseThrow(() -> new IllegalArgumentException("Leader not found"));
+        if (leader.getRole() != UserRole.COMMUNITY_LEADER && leader.getRole() != UserRole.UNI_ADMIN) {
+            throw new IllegalArgumentException("User is not a leader or admin");
+        }
+        return projectRepository.findByLeaderId(leaderId);
+    }
+
     public Project getProjectById(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found"));
