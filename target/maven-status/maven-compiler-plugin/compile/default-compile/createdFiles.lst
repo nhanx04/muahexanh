@@ -16,6 +16,7 @@ com\muahexanh\be\project\dto\UpdateProjectRequest.class
 com\muahexanh\be\user\UserController.class
 com\muahexanh\be\auth\dto\StudentRegisterRequest.class
 com\muahexanh\be\config\SecurityConfig.class
+com\muahexanh\be\project\dto\ProjectMemberResponse.class
 com\muahexanh\be\MuaHexanhBeApplication.class
 com\muahexanh\be\project\ProjectController.class
 com\muahexanh\be\user\UserRole.class

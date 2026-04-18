@@ -121,6 +121,16 @@ public class ProjectService {
         return projectApplicationRepository.findByProjectIdAndStatus(projectId, ProjectApplicationStatus.ACCEPTED);
     }
 
+    @Transactional(readOnly = true)
+    public List<ProjectApplication> getMyApplications(Long studentId) {
+        return projectApplicationRepository.findByStudentId(studentId);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<ProjectApplication> getApplicationByUserAndProject(Long projectId, Long studentId) {
+        return projectApplicationRepository.findByProjectIdAndStudentId(projectId, studentId);
+    }
+
     private static java.time.LocalDateTime convertToLocalDateTime(OffsetDateTime dateTime) {
         return dateTime == null ? null : dateTime.toLocalDateTime();
     }
