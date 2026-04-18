@@ -113,6 +113,26 @@ public class ProjectController {
         return ResponseEntity.ok(ProjectApplicationResponse.fromEntity(application));
     }
 
+    @GetMapping("/applications/my")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<List<ProjectApplicationResponse>> getMyApplications() {
+        User currentUser = getCurrentUser();
+        List<ProjectApplicationResponse> applications = projectService.getMyApplications(currentUser.getId())
+                .stream()
+                .map(ProjectApplicationResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(applications);
+    }
+
+    @GetMapping("/{id}/application-status")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ProjectApplicationResponse> getApplicationStatus(@PathVariable Long id) {
+        User currentUser = getCurrentUser();
+        return projectService.getApplicationByUserAndProject(id, currentUser.getId())
+                .map(application -> ResponseEntity.ok(ProjectApplicationResponse.fromEntity(application)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
